@@ -38,17 +38,56 @@ public enum
 	CO_CLEANSTART
 
 --C_Func-----------------------------------------------------------------------
-atom xMQTTClient_create = define_c_func(paho_c_dll, "+MQTTClient_create", {C_HANDLE, C_POINTER ,C_POINTER, C_INT, C_INT}, C_INT)
-atom xMQTTClient_setCallbacks = define_c_func(paho_c_dll, "+MQTTClient_setCallbacks", {C_HANDLE, C_POINTER, C_POINTER, C_POINTER, C_POINTER}, C_INT)
 atom xMQTTClient_connect = define_c_func(paho_c_dll, "+MQTTClient_connect", {C_HANDLE, C_POINTER}, C_INT)
-atom xMQTTClient_subscribe = define_c_func(paho_c_dll, "+MQTTClient_subscribe", {C_HANDLE, C_POINTER, C_INT}, C_INT)
-atom xMQTTClient_getVersionInfo = define_c_func(paho_c_dll, "+MQTTClient_getVersionInfo",{}, C_POINTER)
-atom xMQTTClient_freeMessage = define_c_proc(paho_c_dll, "+MQTTClient_freeMessage", {C_POINTER})
-atom xMQTTClient_free = define_c_proc(paho_c_dll, "+MQTTClient_free", {C_POINTER})
-
-atom xMQTTClient_unsubscribe = define_c_func(paho_c_dll, "+MQTTClient_unsubscribe", {C_HANDLE, C_POINTER}, C_INT)
-atom xMQTTClient_disconnect = define_c_func(paho_c_dll, "+MQTTClient_disconnect", {C_HANDLE, C_INT}, C_INT)
+--MQTTClient_connect5
+atom xMQTTClient_create = define_c_func(paho_c_dll, "+MQTTClient_create", {C_HANDLE, C_POINTER ,C_POINTER, C_INT, C_INT}, C_INT)
+--MQTTClient_createWithOptions
 atom xMQTTClient_destroy = define_c_proc(paho_c_dll, "+MQTTClient_destroy", {C_HANDLE})
+atom xMQTTClient_disconnect = define_c_func(paho_c_dll, "+MQTTClient_disconnect", {C_HANDLE, C_INT}, C_INT)
+--MQTTClient_disconnect5
+atom xMQTTClient_free = define_c_proc(paho_c_dll, "+MQTTClient_free", {C_POINTER})
+atom xMQTTClient_freeMessage = define_c_proc(paho_c_dll, "+MQTTClient_freeMessage", {C_POINTER})
+--MQTTClient_getPendingDeliveryTokens
+atom xMQTTClient_getVersionInfo = define_c_func(paho_c_dll, "+MQTTClient_getVersionInfo",{}, C_POINTER)
+--MQTTClient_global_init
+--MQTTClient_isConnected
+--MQTTClient_publish
+--MQTTClient_publish5
+--MQTTClient_publishMessage
+--MQTTClient_publishMessage5
+--MQTTClient_receive
+atom xMQTTClient_setCallbacks = define_c_func(paho_c_dll, "+MQTTClient_setCallbacks", {C_HANDLE, C_POINTER, C_POINTER, C_POINTER, C_POINTER}, C_INT)
+--MQTTClient_setDisconnected
+--MQTTClient_setPublished
+--MQTTClient_setTraceCallback
+--MQTTClient_setTraceLevel
+--MQTTClient_strerror
+atom xMQTTClient_subscribe = define_c_func(paho_c_dll, "+MQTTClient_subscribe", {C_HANDLE, C_POINTER, C_INT}, C_INT)
+--MQTTClient_subscribe5
+--MQTTClient_subscribeMany
+--MQTTClient_subscribeMany5
+atom xMQTTClient_unsubscribe = define_c_func(paho_c_dll, "+MQTTClient_unsubscribe", {C_HANDLE, C_POINTER}, C_INT)
+--MQTTClient_unsubscribe5
+--MQTTClient_unsubscribeMany
+--MQTTClient_unsubscribeMany5
+--MQTTClient_waitForCompletion
+--MQTTClient_yield
+--MQTTProperties_add
+--MQTTProperties_copy
+--MQTTProperties_free
+--MQTTProperties_getNumericValue
+--MQTTProperties_getNumericValueAt
+--MQTTProperties_getProperty
+--MQTTProperties_getPropertyAt
+--MQTTProperties_hasProperty
+--MQTTProperties_propertyCount
+--MQTTProperty_getType
+--MQTTPropertyName
+--MQTTReasonCode_toString
+--MQTTResponse_free
+
+
+
 
 --Local variables
 atom user_messageArrived_callback
