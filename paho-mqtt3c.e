@@ -219,14 +219,14 @@ public function MQTTClient_setCallbacks(atom hndl, atom rid_messageArrived = 0, 
 	return ret
 end function
 
-procedure MQTTClient_freeMessage(atom ptr_msg)
+public procedure MQTTClient_freeMessage(atom ptr_msg)
 	atom ptr_struct = allocate(4)
 	poke4(ptr_struct, ptr_msg)
 	c_proc(xMQTTClient_freeMessage, {ptr_struct})
 	free(ptr_struct)
 end procedure
 
-procedure MQTTClient_free(atom pointer)
+public procedure MQTTClient_free(atom pointer)
 	c_proc(xMQTTClient_free, {pointer})
 end procedure
 
