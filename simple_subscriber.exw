@@ -57,4 +57,4 @@ end while
 
 MQTTClient_unsubscribe(client, "test")
 MQTTClient_disconnect(client, 10000)
---MQTTClient_destroy(machine_addr(client)) --not working
+MQTTClient_destroy(client)

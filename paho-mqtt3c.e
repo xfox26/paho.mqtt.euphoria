@@ -15,6 +15,28 @@ public constant
 	MQTTCLIENT_PERSISTENCE_NONE = 1,
 	MQTTCLIENT_SUCCESS = 0
 
+public enum
+	CO_STRUCT_VERSION,
+	CO_KEEPALIVEINTERVAL,
+	CO_CLEANSESSION,
+	CO_RELIABLE,
+	CO_WILL,
+	CO_USERNAME,
+	CO_PASSWORD,
+	CO_CONNECTTIMEOUT,
+	CO_RETRYINTERVAL,
+	CO_SSL,
+	CO_SERVERURICOUNT,
+	CO_SERVERURIS,
+	CO_MQTTVERSION,
+	CO_SERVERURI_RETURNED,
+	CO_MQTTVERSION_RETURNED,
+	CO_SESSIONPRESENT_RETURNED,
+	CO_LEN,
+	CO_DATA,
+	CO_MAXINFLIGHTMESSAGES,
+	CO_CLEANSTART
+
 --C_Func-----------------------------------------------------------------------
 atom xMQTTClient_create = define_c_func(paho_c_dll, "+MQTTClient_create", {C_HANDLE, C_POINTER ,C_POINTER, C_INT, C_INT}, C_INT)
 atom xMQTTClient_setCallbacks = define_c_func(paho_c_dll, "+MQTTClient_setCallbacks", {C_HANDLE, C_POINTER, C_POINTER, C_POINTER, C_POINTER}, C_INT)
@@ -54,7 +76,7 @@ function default_messageArrived_dispacher(atom ptr_context, atom ptr_topicName, 
 	sequence topic = peek_string(ptr_topicName)
 	sequence message = peek({peek4u(ptr_client_message+12),peek4u(ptr_client_message+8)})
 
-	--MQTTClient_freeMessage(ptr_client_message) --TODO: Dont work yet...
+	MQTTClient_freeMessage(ptr_client_message)
 	MQTTClient_free(ptr_topicName)
 
 	return call_func(user_messageArrived_callback, {topic, message}) --TODO: add context
@@ -86,12 +108,12 @@ public atom deliveryComplete_dispacher = routine_id("default_deliveryComplete_di
 
 
 --MQTT Functions---------------------------------------------------------------
-public function MQTTClient_create(sequence server_uri, sequence client_id, atom persistence_type, atom persistence_context)
+public function MQTTClient_create(sequence server_uri, sequence client_id, atom persistence_type = MQTTCLIENT_PERSISTENCE_NONE, atom persistence_context = NULL)
 	atom hndl = allocate_data(4) 
 	atom ptr_server_uri = allocate_string(server_uri) 
 	atom ptr_client_id = allocate_string(client_id) 
  
-	atom ret = c_func(xMQTTClient_create, {hndl, ptr_server_uri, ptr_client_id, MQTTCLIENT_PERSISTENCE_NONE, NULL}) 
+	atom ret = c_func(xMQTTClient_create, {hndl, ptr_server_uri, ptr_client_id, persistence_type, persistence_context}) 
 		if ret = MQTTCLIENT_SUCCESS then 
 			ret = peek4u(hndl) 
 		else 
@@ -106,27 +128,8 @@ end function
 public function MQTTClient_connect(atom hndl, sequence options=default_connectOptions)
 	atom MQTTClient_connectOptions = allocate_data(4*21)
 
-	poke(MQTTClient_connectOptions+4*0,"MQTC")--must be MQTC
-	poke4(MQTTClient_connectOptions+4*1, options[1])--sctruct version
-	poke4(MQTTClient_connectOptions+4*2, options[2])--keepAliveInterval
-	poke4(MQTTClient_connectOptions+4*3, options[3])--cleansession
-	poke4(MQTTClient_connectOptions+4*4, options[4])--reliable
-	poke4(MQTTClient_connectOptions+4*5, options[5])--will
-	poke4(MQTTClient_connectOptions+4*6, options[6])--username
-	poke4(MQTTClient_connectOptions+4*7, options[7])--password
-	poke4(MQTTClient_connectOptions+4*8, options[8])--connectTimeout
-	poke4(MQTTClient_connectOptions+4*9, options[9])--retryInterval
-	poke4(MQTTClient_connectOptions+4*10, options[10])--ssl
-	poke4(MQTTClient_connectOptions+4*11, options[11])--serverURIcount
-	poke4(MQTTClient_connectOptions+4*12, options[12])--serverURIs
-	poke4(MQTTClient_connectOptions+4*13, options[13])--MQTTVersion
-	poke4(MQTTClient_connectOptions+4*14, options[14])--serverURI
-	poke4(MQTTClient_connectOptions+4*15, options[15])--MQTTVersion again
-	poke4(MQTTClient_connectOptions+4*16, options[16])--sessionPresent
-	poke4(MQTTClient_connectOptions+4*17, options[17])--len binary password length
-	poke4(MQTTClient_connectOptions+4*18, options[18])--data binary password data
-	poke4(MQTTClient_connectOptions+4*19, options[19]) --maxInflightMessages
-	poke4(MQTTClient_connectOptions+4*20, options[20])--cleanstart
+	poke(MQTTClient_connectOptions,"MQTC")--must be MQTC
+	poke4(MQTTClient_connectOptions+4, options)
 
 	atom ret = c_func(xMQTTClient_connect, {hndl, MQTTClient_connectOptions})
 
@@ -151,7 +154,7 @@ public function MQTTClient_getVersionInfo()
 	return {peek_string(ptrs[1]),peek_string(ptrs[2])}
 end function
 
-public function MQTTClient_setCallbacks(atom hndl, atom rid_messageArrived = 0,  atom rid_deliveryComplete = 0, atom rid_connectionLost = 0) --TODO add other callbacks
+public function MQTTClient_setCallbacks(atom hndl, atom rid_messageArrived = 0,  atom rid_deliveryComplete = 0, atom rid_connectionLost = 0)
 	atom ma = NULL
 	atom cl = NULL
 	atom dc = NULL
@@ -178,7 +181,10 @@ public function MQTTClient_setCallbacks(atom hndl, atom rid_messageArrived = 0, 
 end function
 
 procedure MQTTClient_freeMessage(atom ptr_msg)
-	c_proc(xMQTTClient_freeMessage, {ptr_msg})
+	atom ptr_struct = allocate(4)
+	poke4(ptr_struct, ptr_msg)
+	c_proc(xMQTTClient_freeMessage, {ptr_struct})
+	free(ptr_struct)
 end procedure
 
 procedure MQTTClient_free(atom pointer)
@@ -200,5 +206,9 @@ public function MQTTClient_disconnect(atom hndl, atom timeout)
 end function
 
 public procedure MQTTClient_destroy(atom hndl)
-	c_proc(xMQTTClient_destroy, {hndl})
+	atom ptr_hndl = allocate(4)
+	poke4(ptr_hndl, hndl)
+
+	c_proc(xMQTTClient_destroy, {ptr_hndl})
+	free(ptr_hndl)
 end procedure
