@@ -61,7 +61,7 @@ atom xMQTTClient_setCallbacks = define_c_func(paho_c_dll, "+MQTTClient_setCallba
 --MQTTClient_setPublished
 --MQTTClient_setTraceCallback
 --MQTTClient_setTraceLevel
---MQTTClient_strerror
+atom xMQTTClient_strerror = define_c_func(paho_c_dll, "+MQTTClient_strerror", {C_INT}, C_POINTER)
 atom xMQTTClient_subscribe = define_c_func(paho_c_dll, "+MQTTClient_subscribe", {C_HANDLE, C_POINTER, C_INT}, C_INT)
 --MQTTClient_subscribe5
 --MQTTClient_subscribeMany
@@ -154,9 +154,7 @@ public function MQTTClient_create(sequence server_uri, sequence client_id, atom 
  
 	atom ret = c_func(xMQTTClient_create, {hndl, ptr_server_uri, ptr_client_id, persistence_type, persistence_context}) 
 		if ret = MQTTCLIENT_SUCCESS then 
-			ret = peek4u(hndl) 
-		else 
-			ret = NULL 
+			ret = peek4u(hndl)
 		end if 
 	free(ptr_server_uri) 
 	free(ptr_client_id) 
@@ -251,3 +249,10 @@ public procedure MQTTClient_destroy(atom hndl)
 	c_proc(xMQTTClient_destroy, {ptr_hndl})
 	free(ptr_hndl)
 end procedure
+
+public function MQTTClient_strerror(atom code)
+	atom ret = c_func(xMQTTClient_strerror, {code})
+	
+	--Do not free after use
+	return peek_string(ret)
+end function

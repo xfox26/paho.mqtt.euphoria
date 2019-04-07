@@ -18,28 +18,28 @@ end function
 --Create handler
 atom client = MQTTClient_create("tcp://192.168.0.2:1883", "12345", 1, 1)
 if client <= 0 then
-	puts(1, "Error "&sprint(client)&" creating handler\n")
+	puts(1, "Error creating handler: "&MQTTClient_strerror(client)&"\n")
 	abort(1)
 end if
 
 --Set Callbacks
 ret = MQTTClient_setCallbacks(client, routine_id("message_arrived"))
 if ret != MQTTCLIENT_SUCCESS then
-	puts(1, "Error "&sprint(ret)&" setting Callbacks\n")
+	puts(1, "Error setting Callbacks: "&MQTTClient_strerror(client)&"\n")
 	abort(1)
 end if
 
 --Connect
 ret = MQTTClient_connect(client)
 if ret != MQTTCLIENT_SUCCESS then
-	puts(1, "Error "&sprint(ret)&" connecting\n")
+	puts(1, "Error connecting: "&MQTTClient_strerror(client)&"\n")
 	abort(1)
 end if
 
 --Subscribe
 ret = MQTTClient_subscribe(client, "test", 2)
 if ret != MQTTCLIENT_SUCCESS then
-	puts(1, "Error "&sprint(ret)&" subscribing\n")
+	puts(1, "Error subscribing: "&MQTTClient_strerror(client)&"\n")
 	abort(1)
 end if
 
