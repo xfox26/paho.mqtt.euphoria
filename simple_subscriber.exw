@@ -1,0 +1,60 @@
+include paho-mqtt3c.e
+include std/os.e
+include std/text.e
+
+include std/dll.e
+
+atom ret
+
+--on message arrived
+function message_arrived(sequence topicName, sequence message)
+	puts(1, "topic:   "& topicName &"\n")
+	puts(1, "message: "& message&"\n")
+	puts(1, "\n")
+
+	return 1 --success
+end function
+
+--Create handler
+atom client = MQTTClient_create("tcp://192.168.0.2:1883", "12345", 1, 1)
+if client <= 0 then
+	puts(1, "Error "&sprint(client)&" creating handler\n")
+	abort(1)
+end if
+
+--Set Callbacks
+ret = MQTTClient_setCallbacks(client, routine_id("message_arrived"))
+if ret != MQTTCLIENT_SUCCESS then
+	puts(1, "Error "&sprint(ret)&" setting Callbacks\n")
+	abort(1)
+end if
+
+--Connect
+ret = MQTTClient_connect(client)
+if ret != MQTTCLIENT_SUCCESS then
+	puts(1, "Error "&sprint(ret)&" connecting\n")
+	abort(1)
+end if
+
+--Subscribe
+ret = MQTTClient_subscribe(client, "test", 2)
+if ret != MQTTCLIENT_SUCCESS then
+	puts(1, "Error "&sprint(ret)&" subscribing\n")
+	abort(1)
+end if
+
+puts(1, "Listening for messages\n")
+while 1 do --wait for messages
+	atom k = get_key()
+	if k = 120 or k = 88 then  -- x or X
+		puts(1, "Exiting\n")
+		
+		exit
+	end if
+
+	sleep(1)
+end while
+
+MQTTClient_unsubscribe(client, "test")
+MQTTClient_disconnect(client, 10000)
+--MQTTClient_destroy(machine_addr(client)) --not working
