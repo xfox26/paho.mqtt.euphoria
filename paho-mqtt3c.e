@@ -50,7 +50,7 @@ atom xMQTTClient_freeMessage = define_c_proc(paho_c_dll, "+MQTTClient_freeMessag
 --MQTTClient_getPendingDeliveryTokens
 atom xMQTTClient_getVersionInfo = define_c_func(paho_c_dll, "+MQTTClient_getVersionInfo", {}, C_POINTER)
 --MQTTClient_global_init
---MQTTClient_isConnected
+atom xMQTTClient_isConnected = define_c_func(paho_c_dll, "+MQTTClient_isConnected", {C_HANDLE}, C_INT)
 atom xMQTTClient_publish = define_c_func(paho_c_dll, "+MQTTClient_publish", {C_HANDLE, C_POINTER, C_INT, C_POINTER, C_INT, C_INT, C_POINTER}, C_INT)
 --MQTTClient_publish5
 --MQTTClient_publishMessage
@@ -160,6 +160,8 @@ end function
 
 public function MQTTClient_connect(atom hndl, sequence options=default_connectOptions)
 	atom MQTTClient_connectOptions = allocate_data(4*21)
+
+	--TODO: Check for user/password on options and poke as nedded
 
 	poke(MQTTClient_connectOptions,"MQTC")--must be MQTC
 	poke4(MQTTClient_connectOptions+4, options)
@@ -280,4 +282,8 @@ end function
 
 public function MQTTClient_waitForCompletion(atom hndl, atom token, atom timeout)
 	return c_func(xMQTTClient_waitForCompletion, {hndl, token, timeout})
+end function
+
+public function MQTTClient_isConnected(atom hndl)
+	return c_func(xMQTTClient_isConnected, {hndl})
 end function
