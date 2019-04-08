@@ -87,8 +87,6 @@ atom xMQTTClient_unsubscribe = define_c_func(paho_c_dll, "+MQTTClient_unsubscrib
 --MQTTResponse_free
 
 
-
-
 --Local variables
 atom user_messageArrived_callback
 atom user_deliveryComplete_callback
@@ -114,25 +112,23 @@ function default_messageArrived_dispacher(atom ptr_context, atom ptr_topicName, 
 
 	sequence topic = peek_string(ptr_topicName)
 	sequence message = peek({peek4u(ptr_client_message+12),peek4u(ptr_client_message+8)})
+	sequence context = peek_string(ptr_context)
 
 	MQTTClient_freeMessage(ptr_client_message)
 	MQTTClient_free(ptr_topicName)
 
-	return call_func(user_messageArrived_callback, {topic, message}) --TODO: add context
+	return call_func(user_messageArrived_callback, {topic, message, context})
 end function
 
 function default_connectionLost_dispacher(atom ptr_context, atom ptr_cause)
-	--TODO: get context
-	sequence context = ""
+	sequence context = peek_string(ptr_context)
 	sequence cause = peek_string(cause)
-	
 	
 	return call_func(user_connectionLost_callback, {context, cause})
 end function
 
 function default_deliveryComplete_dispacher(atom ptr_context, atom token)
-	--TODO
-	sequence context = ""
+	sequence context = peek_string(ptr_context)
 	
 	return call_func(user_deliveryComplete_callback, {context, token})
 end function
@@ -191,10 +187,11 @@ public function MQTTClient_getVersionInfo()
 	return {peek_string(ptrs[1]),peek_string(ptrs[2])}
 end function
 
-public function MQTTClient_setCallbacks(atom hndl, atom rid_messageArrived = 0,  atom rid_deliveryComplete = 0, atom rid_connectionLost = 0)
+public function MQTTClient_setCallbacks(atom hndl, atom rid_messageArrived = 0,  atom rid_deliveryComplete = 0, atom rid_connectionLost = 0, sequence context = "")
 	atom ma = NULL
 	atom cl = NULL
 	atom dc = NULL
+	atom ptr_context
 	
 	if rid_messageArrived != 0 then
 		user_messageArrived_callback = rid_messageArrived
@@ -211,8 +208,11 @@ public function MQTTClient_setCallbacks(atom hndl, atom rid_messageArrived = 0, 
 		cl  = call_back({'+', connectionLost_dispacher})
 	end if
 
-	--TODO: context
-	atom ret = c_func(xMQTTClient_setCallbacks, {hndl, dll:NULL, cl, ma, dc})
+	if not equal(context, "") then
+		ptr_context = allocate_string(context)
+	end if
+
+	atom ret = c_func(xMQTTClient_setCallbacks, {hndl, ptr_context, cl, ma, dc})
 
 	return ret
 end function

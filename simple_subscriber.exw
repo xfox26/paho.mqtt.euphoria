@@ -7,9 +7,10 @@ include std/dll.e
 atom ret
 
 --on message arrived
-function message_arrived(sequence topicName, sequence message)
+function message_arrived(sequence topicName, sequence message, sequence context)
 	puts(1, "topic:   "& topicName &"\n")
-	puts(1, "message: "& message&"\n")
+	puts(1, "message: "& message &"\n")
+	puts(1, "context: "& context &"\n")
 	puts(1, "\n")
 
 	return 1 --success
@@ -23,7 +24,7 @@ if client <= 0 then
 end if
 
 --Set Callbacks
-ret = MQTTClient_setCallbacks(client, routine_id("message_arrived"))
+ret = MQTTClient_setCallbacks(client, routine_id("message_arrived"), 0,0, "Some optional context")
 if ret != MQTTCLIENT_SUCCESS then
 	puts(1, "Error setting Callbacks: "&MQTTClient_strerror(client)&"\n")
 	abort(1)
