@@ -48,10 +48,10 @@ atom xMQTTClient_disconnect = define_c_func(paho_c_dll, "+MQTTClient_disconnect"
 atom xMQTTClient_free = define_c_proc(paho_c_dll, "+MQTTClient_free", {C_POINTER})
 atom xMQTTClient_freeMessage = define_c_proc(paho_c_dll, "+MQTTClient_freeMessage", {C_POINTER})
 --MQTTClient_getPendingDeliveryTokens
-atom xMQTTClient_getVersionInfo = define_c_func(paho_c_dll, "+MQTTClient_getVersionInfo",{}, C_POINTER)
+atom xMQTTClient_getVersionInfo = define_c_func(paho_c_dll, "+MQTTClient_getVersionInfo", {}, C_POINTER)
 --MQTTClient_global_init
 --MQTTClient_isConnected
---MQTTClient_publish
+atom xMQTTClient_publish = define_c_func(paho_c_dll, "+MQTTClient_publish", {C_HANDLE, C_POINTER, C_INT, C_POINTER, C_INT, C_INT, C_POINTER}, C_INT)
 --MQTTClient_publish5
 --MQTTClient_publishMessage
 --MQTTClient_publishMessage5
@@ -70,8 +70,8 @@ atom xMQTTClient_unsubscribe = define_c_func(paho_c_dll, "+MQTTClient_unsubscrib
 --MQTTClient_unsubscribe5
 --MQTTClient_unsubscribeMany
 --MQTTClient_unsubscribeMany5
---MQTTClient_waitForCompletion
---MQTTClient_yield
+atom xMQTTClient_waitForCompletion = define_c_func(paho_c_dll, "+MQTTClient_waitForCompletion", {C_HANDLE, C_INT, C_ULONG}, C_INT)
+atom xMQTTClient_yield = define_c_proc(paho_c_dll, "+MQTTClient_yield", {})
 --MQTTProperties_add
 --MQTTProperties_copy
 --MQTTProperties_free
@@ -255,4 +255,29 @@ public function MQTTClient_strerror(atom code)
 	
 	--Do not free after use
 	return peek_string(ret)
+end function
+
+public procedure MQTTClient_yield()
+	c_proc(xMQTTClient_yield, {})
+end procedure
+
+public function MQTTClient_publish(atom hndl, sequence topicName, sequence payload, atom qos, atom retained)
+	atom ptr_topicName = allocate_string(topicName)
+	atom ptr_payload = allocate_string(payload)
+	atom ptr_token = allocate(4)
+
+	atom ret = c_func(xMQTTClient_publish, {hndl, ptr_topicName, length(payload), ptr_payload, qos, retained, ptr_token})
+	if ret = MQTTCLIENT_SUCCESS then 
+		ret = peek4u(ptr_token)
+	end if 
+
+	free(ptr_topicName)
+	free(ptr_payload)
+	free(ptr_token)
+
+	return ret
+end function
+
+public function MQTTClient_waitForCompletion(atom hndl, atom token, atom timeout)
+	return c_func(xMQTTClient_waitForCompletion, {hndl, token, timeout})
 end function
