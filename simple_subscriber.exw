@@ -1,8 +1,5 @@
 include paho-mqtt3c.e
 include std/os.e
-include std/text.e
-
-include std/dll.e
 
 atom ret
 
@@ -17,14 +14,14 @@ function message_arrived(sequence topicName, sequence message, sequence context)
 end function
 
 --Create handler
-atom client = MQTTClient_create("tcp://192.168.0.2:1883", "12345", 1, 1)
+atom client = MQTTClient_create("tcp://192.168.0.2:1883", "sub12345", 1, 1)
 if client <= 0 then
 	puts(1, "Error creating handler: "&MQTTClient_strerror(client)&"\n")
 	abort(1)
 end if
 
 --Set Callbacks
-ret = MQTTClient_setCallbacks(client, routine_id("message_arrived"), 0,0, "Some optional context")
+ret = MQTTClient_setCallbacks(client, routine_id("message_arrived"), 0, 0, "Some optional context")
 if ret != MQTTCLIENT_SUCCESS then
 	puts(1, "Error setting Callbacks: "&MQTTClient_strerror(client)&"\n")
 	abort(1)
