@@ -9,7 +9,7 @@ if paho_c_dll <= 0 then
 end if
 
 --Constants--------------------------------------------------------------------
-public constant default_connectOptions = {6,60,1,1,NULL,NULL,NULL,30,0,NULL,0,NULL,0,NULL,0,0,0,NULL,-1,0}
+public constant default_connectOptions = {6,60,1,1,NULL,"","",30,0,NULL,0,NULL,0,NULL,0,0,0,NULL,-1,0}
 
 --Return Codes
 public constant
@@ -181,14 +181,26 @@ public function MQTTClient_create(sequence server_uri, sequence client_id, atom 
 end function
 
 public function MQTTClient_connect(atom hndl, sequence options=default_connectOptions)
+	atom userpass_allocated = 0
+
 	atom MQTTClient_connectOptions = allocate_data(4*21)
 
 	--TODO: Check for user/password on options and poke as nedded
+	if not equal(options[CO_USERNAME], "") then
+		options[CO_USERNAME] = allocate_string(options[CO_USERNAME])
+		options[CO_PASSWORD] = allocate_string(options[CO_PASSWORD])
+		userpass_allocated = 1
+	end if
 
 	poke(MQTTClient_connectOptions,"MQTC")--must be MQTC
 	poke4(MQTTClient_connectOptions+4, options)
 
 	atom ret = c_func(xMQTTClient_connect, {hndl, MQTTClient_connectOptions})
+
+	if userpass_allocated then
+		free(options[CO_USERNAME])
+		free(options[CO_PASSWORD])
+	end if
 
 	return ret
 end function

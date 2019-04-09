@@ -25,21 +25,26 @@ end if
 --Set Callbacks
 ret = MQTTClient_setCallbacks(client, routine_id("message_arrived"), 0, 0, "Some optional context")
 if ret != MQTTCLIENT_SUCCESS then
-	puts(1, "Error setting Callbacks: "&MQTTClient_strerror(client)&"\n")
+	puts(1, "Error setting Callbacks: "&MQTTClient_strerror(ret)&"\n")
 	abort(1)
 end if
 
+--Set connectOptions
+sequence options = default_connectOptions
+options[CO_USERNAME] = "my_user"
+options[CO_PASSWORD] = "my_pass"
+
 --Connect
-ret = MQTTClient_connect(client)
+ret = MQTTClient_connect(client, options)
 if ret != MQTTCLIENT_SUCCESS then
-	puts(1, "Error connecting: "&MQTTClient_strerror(client)&"\n")
+	puts(1, "Error connecting: "&MQTTClient_strerror(ret)&"\n")
 	abort(1)
 end if
 
 --Subscribe
 ret = MQTTClient_subscribe(client, "test", 2)
 if ret != MQTTCLIENT_SUCCESS then
-	puts(1, "Error subscribing: "&MQTTClient_strerror(client)&"\n")
+	puts(1, "Error subscribing: "&MQTTClient_strerror(ret)&"\n")
 	abort(1)
 end if
 

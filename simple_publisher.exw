@@ -11,10 +11,15 @@ if client <= 0 then
 	abort(1)
 end if
 
+--Set connectOptions
+sequence options = default_connectOptions
+options[CO_USERNAME] = "my_user"
+options[CO_PASSWORD] = "my_pass"
+
 --Connect
-ret = MQTTClient_connect(client)
+ret = MQTTClient_connect(client, options)
 if ret != MQTTCLIENT_SUCCESS then
-	puts(1, "Error connecting: "&MQTTClient_strerror(client)&"\n")
+	puts(1, "Error connecting: "&MQTTClient_strerror(ret)&"\n")
 	abort(1)
 end if
 
@@ -27,7 +32,7 @@ else
 	--Wait
 	ret = MQTTClient_waitForCompletion(client, token, 10000)
 	if ret != MQTTCLIENT_SUCCESS then
-		puts(1, "Error waiting: "&MQTTClient_strerror(client)&"\n")
+		puts(1, "Error waiting: "&MQTTClient_strerror(ret)&"\n")
 	end if
 end if
 
