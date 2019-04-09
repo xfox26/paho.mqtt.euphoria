@@ -6,7 +6,7 @@ atom ret
 MQTTClient_global_init()
 
 --on message arrived
-function message_arrived(sequence topicName, sequence message, sequence context)
+function message_arrived(sequence topicName, sequence message, sequence context, sequence raw_message)
 	puts(1, "topic:   "& topicName &"\n")
 	puts(1, "message: "& message &"\n")
 	puts(1, "context: "& context &"\n")

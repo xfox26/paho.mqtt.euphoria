@@ -57,6 +57,19 @@ public enum
 	CO_MAXINFLIGHTMESSAGES,
 	CO_CLEANSTART
 
+--Message Arrived fields
+public enum
+	MA_PAYLOADLEN,
+	MA_PAYLOAD,
+	MA_QOS,
+	MA_RETAINED, 
+	MA_DUP,
+	MA_MSGID,
+	MA_PROPERTY_COUNT,
+	MA_PROPERTY_MAX_COUNT,
+	MA_PROPERTY_LENGTH,
+	MA_PROPERTY_ARRAY
+
 --C_Func-----------------------------------------------------------------------
 atom xMQTTClient_connect = define_c_func(paho_c_dll, "+MQTTClient_connect", {C_HANDLE, C_POINTER}, C_INT)
 atom xMQTTClient_create = define_c_func(paho_c_dll, "+MQTTClient_create", {C_HANDLE, C_POINTER ,C_POINTER, C_INT, C_INT}, C_INT)
@@ -119,18 +132,17 @@ atom user_connectionLost_callback
 
 --Defaults---------------------------------------------------------------------
 function default_messageArrived_dispacher(atom ptr_context, atom ptr_topicName, atom topicLen, atom ptr_client_message)
---	peek({ptr_client_message,4}) --struct_id
---	peek4u(ptr_client_message+4) --struct_version
---	peek4u(ptr_client_message+8) --payloadlen
---	peek4u(ptr_client_message+12) --payload
---	peek4u(ptr_client_message+16) --qos
---	peek4u(ptr_client_message+20) --retained
---	peek4u(ptr_client_message+24) --dup
---	peek4u(ptr_client_message+28) --msgid
---	peek4u(ptr_client_message+32) --properties
---	peek4u(ptr_client_message+36) --properties
---	peek4u(ptr_client_message+40) --properties
---	peek4u(ptr_client_message+44) --properties
+	sequence raw_message = repeat({},10)
+	raw_message[MA_PAYLOADLEN] = peek4u(ptr_client_message+8)
+	raw_message[MA_PAYLOAD] = peek({peek4u(ptr_client_message+12),peek4u(ptr_client_message+8)})
+	raw_message[MA_QOS] = peek4u(ptr_client_message+16)
+	raw_message[MA_RETAINED] = peek4u(ptr_client_message+20)
+	raw_message[MA_DUP] = peek4u(ptr_client_message+24)
+	raw_message[MA_MSGID] = peek4u(ptr_client_message+28)
+	raw_message[MA_PROPERTY_COUNT] = peek4u(ptr_client_message+32)
+	raw_message[MA_PROPERTY_MAX_COUNT] = peek4u(ptr_client_message+36)
+	raw_message[MA_PROPERTY_LENGTH] = peek4u(ptr_client_message+40)
+	raw_message[MA_PROPERTY_ARRAY] = peek4u(ptr_client_message+44)
 
 	sequence topic = peek_string(ptr_topicName)
 	sequence message = peek({peek4u(ptr_client_message+12),peek4u(ptr_client_message+8)})
@@ -139,7 +151,7 @@ function default_messageArrived_dispacher(atom ptr_context, atom ptr_topicName, 
 	MQTTClient_freeMessage(ptr_client_message)
 	MQTTClient_free(ptr_topicName)
 
-	return call_func(user_messageArrived_callback, {topic, message, context})
+	return call_func(user_messageArrived_callback, {topic, message, context, raw_message})
 end function
 
 function default_connectionLost_dispacher(atom ptr_context, atom ptr_cause)
@@ -185,7 +197,7 @@ public function MQTTClient_connect(atom hndl, sequence options=default_connectOp
 
 	atom MQTTClient_connectOptions = allocate_data(4*21)
 
-	--TODO: Check for user/password on options and poke as nedded
+	--Check for user/password on options and poke if nedded
 	if not equal(options[CO_USERNAME], "") then
 		options[CO_USERNAME] = allocate_string(options[CO_USERNAME])
 		options[CO_PASSWORD] = allocate_string(options[CO_PASSWORD])
