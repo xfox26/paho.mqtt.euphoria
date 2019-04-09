@@ -3,6 +3,8 @@ include std/os.e
 
 atom ret
 
+MQTTClient_global_init()
+
 --on message arrived
 function message_arrived(sequence topicName, sequence message, sequence context)
 	puts(1, "topic:   "& topicName &"\n")

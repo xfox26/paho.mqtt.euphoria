@@ -47,7 +47,7 @@ atom xMQTTClient_free = define_c_proc(paho_c_dll, "+MQTTClient_free", {C_POINTER
 atom xMQTTClient_freeMessage = define_c_proc(paho_c_dll, "+MQTTClient_freeMessage", {C_POINTER})
 --MQTTClient_getPendingDeliveryTokens
 atom xMQTTClient_getVersionInfo = define_c_func(paho_c_dll, "+MQTTClient_getVersionInfo", {}, C_POINTER)
---MQTTClient_global_init
+atom xMQTTClient_global_init = define_c_proc(paho_c_dll, "+MQTTClient_global_init", {C_POINTER})
 atom xMQTTClient_isConnected = define_c_func(paho_c_dll, "+MQTTClient_isConnected", {C_HANDLE}, C_INT)
 atom xMQTTClient_publish = define_c_func(paho_c_dll, "+MQTTClient_publish", {C_HANDLE, C_POINTER, C_INT, C_POINTER, C_INT, C_INT, C_POINTER}, C_INT)
 --MQTTClient_publishMessage
@@ -289,3 +289,15 @@ end function
 public function MQTTClient_isConnected(atom hndl)
 	return c_func(xMQTTClient_isConnected, {hndl})
 end function
+
+public procedure MQTTClient_global_init(atom do_open_ssl = 0)
+	atom MQTTClient_init_options = allocate_data(4*3)
+
+	poke(MQTTClient_init_options,"MQTG") --must be MQTG
+	poke4(MQTTClient_init_options+4, 0) --must be 0
+	poke4(MQTTClient_init_options+8, do_open_ssl)
+
+	c_proc(xMQTTClient_global_init, {MQTTClient_init_options})
+
+	free(MQTTClient_init_options)
+end procedure

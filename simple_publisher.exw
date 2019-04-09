@@ -2,6 +2,8 @@ include paho-mqtt3c.e
 
 atom ret
 
+MQTTClient_global_init()
+
 --Create handler
 atom client = MQTTClient_create("tcp://192.168.0.2:1883", "pub12345", 1, 1)
 if client <= 0 then
