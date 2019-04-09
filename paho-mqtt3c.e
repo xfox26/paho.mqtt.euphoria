@@ -2,6 +2,7 @@ namespace MQTT
 
 include std/dll.e
 include std/machine.e
+include std/sequence.e
 
 atom paho_c_dll = open_dll("paho-mqtt3c.dll")
 if paho_c_dll <= 0 then
@@ -92,9 +93,9 @@ atom xMQTTClient_setCallbacks = define_c_func(paho_c_dll, "+MQTTClient_setCallba
 --MQTTClient_setTraceLevel
 atom xMQTTClient_strerror = define_c_func(paho_c_dll, "+MQTTClient_strerror", {C_INT}, C_POINTER)
 atom xMQTTClient_subscribe = define_c_func(paho_c_dll, "+MQTTClient_subscribe", {C_HANDLE, C_POINTER, C_INT}, C_INT)
---MQTTClient_subscribeMany
+atom xMQTTClient_subscribeMany = define_c_func(paho_c_dll, "+MQTTClient_subscribeMany", {C_HANDLE, C_INT, C_POINTER, C_POINTER}, C_INT)
 atom xMQTTClient_unsubscribe = define_c_func(paho_c_dll, "+MQTTClient_unsubscribe", {C_HANDLE, C_POINTER}, C_INT)
---MQTTClient_unsubscribeMany
+atom xMQTTClient_unsubscribeMany = define_c_func(paho_c_dll, "+MQTTClient_unsubscribeMany", {C_HANDLE, C_INT, C_POINTER}, C_INT)
 atom xMQTTClient_waitForCompletion = define_c_func(paho_c_dll, "+MQTTClient_waitForCompletion", {C_HANDLE, C_INT, C_ULONG}, C_INT)
 atom xMQTTClient_yield = define_c_proc(paho_c_dll, "+MQTTClient_yield", {})
 
@@ -345,3 +346,27 @@ public procedure MQTTClient_global_init(atom do_open_ssl = 0)
 
 	free(MQTTClient_init_options)
 end procedure
+
+public function MQTTClient_subscribeMany(atom hndl, sequence topics)
+	atom ptr_topics = allocate_string_pointer_array(vslice(topics,1))
+
+	atom ptr_qos = allocate(length(topics)*4)
+	poke4(ptr_qos, vslice(topics,2))
+
+	atom ret = c_func(xMQTTClient_subscribeMany, {hndl, length(topics), ptr_topics, ptr_qos})
+
+	free_pointer_array(ptr_topics)
+	free(ptr_qos)
+
+	return ret
+end function
+
+public function MQTTClient_unsubscribeMany(atom hndl, sequence topics)
+	atom ptr_topics = allocate_string_pointer_array(topics)
+	
+	atom ret = c_func(xMQTTClient_unsubscribeMany, {hndl, length(topics), ptr_topics})
+
+	free(ptr_topics)
+
+	return ret
+end function
