@@ -71,6 +71,13 @@ public enum
 	MA_PROPERTY_LENGTH,
 	MA_PROPERTY_ARRAY
 
+--Internal client sessions handling
+enum
+	CS_HANDLE,
+	CS_MA_RID,
+	CS_CL_RID,
+	CS_DC_RID
+
 --C_Func-----------------------------------------------------------------------
 atom xMQTTClient_connect = define_c_func(paho_c_dll, "+MQTTClient_connect", {C_HANDLE, C_POINTER}, C_INT)
 atom xMQTTClient_create = define_c_func(paho_c_dll, "+MQTTClient_create", {C_HANDLE, C_POINTER ,C_POINTER, C_INT, C_INT}, C_INT)
@@ -123,16 +130,35 @@ atom xMQTTClient_yield = define_c_proc(paho_c_dll, "+MQTTClient_yield", {})
 --MQTTResponse_free
 
 
---Local variables
-atom user_messageArrived_callback
-atom user_deliveryComplete_callback
-atom user_connectionLost_callback
+--Local Variables--------------------------------------------------------------
+--Holds all created clients and callback handles associated with it
+sequence sessions = {}
 
 --Local Functions--------------------------------------------------------------
+procedure add_session(atom hndl)
+	sessions &= {{hndl,0,0,0}}
+end procedure
 
+procedure set_session_rid(atom hndl, atom rid_type, atom rid)
+	for i=1 to length(sessions) do
+		if sessions[i][CS_HANDLE] = hndl then
+			sessions[i][rid_type] = rid
+			exit
+		end if
+	end for
+end procedure
+
+procedure remove_session(atom hndl)
+	for i=1 to length(sessions) do
+		if sessions[i][CS_HANDLE] = hndl then
+			sessions = remove(sessions, i)
+			exit
+		end if
+	end for
+end procedure
 
 --Defaults---------------------------------------------------------------------
-function default_messageArrived_dispacher(atom ptr_context, atom ptr_topicName, atom topicLen, atom ptr_client_message)
+function messageArrived_dispacher(atom ptr_context, atom ptr_topicName, atom topicLen, atom ptr_client_message)
 	sequence raw_message = repeat({},10)
 	raw_message[MA_PAYLOADLEN] = peek4u(ptr_client_message+8)
 	raw_message[MA_PAYLOAD] = peek({peek4u(ptr_client_message+12),peek4u(ptr_client_message+8)})
@@ -152,25 +178,21 @@ function default_messageArrived_dispacher(atom ptr_context, atom ptr_topicName, 
 	MQTTClient_freeMessage(ptr_client_message)
 	MQTTClient_free(ptr_topicName)
 
-	return call_func(user_messageArrived_callback, {topic, message, context, raw_message})
+	return call_func(sessions[1][CS_MA_RID], {topic, message, context, raw_message})
 end function
 
-function default_connectionLost_dispacher(atom ptr_context, atom ptr_cause)
+function connectionLost_dispacher(atom ptr_context, atom ptr_cause)
 	sequence context = peek_string(ptr_context)
 	sequence cause = peek_string(cause)
 	
-	return call_func(user_connectionLost_callback, {context, cause})
+	return call_func(sessions[1][CS_CL_RID], {context, cause})
 end function
 
-function default_deliveryComplete_dispacher(atom ptr_context, atom token)
+function deliveryComplete_dispacher(atom ptr_context, atom token)
 	sequence context = peek_string(ptr_context)
 	
-	return call_func(user_deliveryComplete_callback, {context, token})
+	return call_func(sessions[1][CS_DC_RID], {context, token})
 end function
-
-public atom messageArrived_dispacher = routine_id("default_messageArrived_dispacher")
-public atom connectionLost_dispacher = routine_id("default_connectionLost_dispacher")
-public atom deliveryComplete_dispacher = routine_id("default_deliveryComplete_dispacher")
 
 --Helper Functions ------------------------------------------------------------
 
@@ -186,6 +208,7 @@ public function MQTTClient_create(sequence server_uri, sequence client_id, atom 
 	atom ret = c_func(xMQTTClient_create, {hndl, ptr_server_uri, ptr_client_id, persistence_type, persistence_context}) 
 		if ret = MQTTCLIENT_SUCCESS then 
 			ret = peek4u(hndl)
+			add_session(ret)
 		end if 
 	free(ptr_server_uri) 
 	free(ptr_client_id) 
@@ -243,18 +266,18 @@ public function MQTTClient_setCallbacks(atom hndl, atom rid_messageArrived = 0, 
 	atom ptr_context
 	
 	if rid_messageArrived != 0 then
-		user_messageArrived_callback = rid_messageArrived
-		ma = call_back({'+', messageArrived_dispacher})
+		set_session_rid(hndl, CS_MA_RID, rid_messageArrived)
+		ma = call_back({'+', routine_id("messageArrived_dispacher")})
 	end if
 
 	if rid_deliveryComplete != 0 then
-		user_deliveryComplete_callback = rid_deliveryComplete
-		dc = call_back({'+', deliveryComplete_dispacher})
+		set_session_rid(hndl, CS_DC_RID, rid_deliveryComplete)
+		dc = call_back({'+', routine_id("deliveryComplete_dispacher")})
 	end if
 
 	if rid_connectionLost != 0 then
-		user_connectionLost_callback = rid_connectionLost
-		cl  = call_back({'+', connectionLost_dispacher})
+		set_session_rid(hndl, CS_CL_RID, rid_connectionLost)
+		cl  = call_back({'+', routine_id("connectionLost_dispacher")})
 	end if
 
 	if not equal(context, "") then
@@ -297,6 +320,8 @@ public procedure MQTTClient_destroy(atom hndl)
 
 	c_proc(xMQTTClient_destroy, {ptr_hndl})
 	free(ptr_hndl)
+
+	remove_session(hndl)
 end procedure
 
 public function MQTTClient_strerror(atom code)
