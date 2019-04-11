@@ -4,7 +4,19 @@ include std/dll.e
 include std/machine.e
 include std/sequence.e
 
-atom paho_c_dll = open_dll("paho-mqtt3c.dll")
+atom paho_c_dll
+
+ifdef BITS32 then
+	ifdef WINDOWS then
+		paho_c_dll = open_dll("paho-mqtt3c.dll")
+	elsifdef UNIX then
+		paho_c_dll = open_dll({"libpaho-mqtt3c.so", "libpaho-mqtt3c.so.1"})
+	end ifdef
+elsedef
+	puts(1, "64 Bits not suppoted yet\n")
+	abort(0)
+end ifdef
+
 if paho_c_dll <= 0 then
 	abort(1)
 end if
