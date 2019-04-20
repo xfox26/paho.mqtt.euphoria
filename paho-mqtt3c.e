@@ -83,6 +83,16 @@ public enum
 	MA_PROPERTY_LENGTH,
 	MA_PROPERTY_ARRAY
 
+--Trace Levels
+public enum
+	MQTTCLIENT_TRACE_MAXIMUM,
+	MQTTCLIENT_TRACE_MEDIUM,
+	MQTTCLIENT_TRACE_MINIMUM,
+	MQTTCLIENT_TRACE_PROTOCOL,
+	MQTTCLIENT_TRACE_ERROR,
+	MQTTCLIENT_TRACE_SEVERE,
+	MQTTCLIENT_TRACE_FATAL
+
 --Internal client sessions handling
 enum
 	CS_HANDLE,
@@ -106,10 +116,8 @@ atom xMQTTClient_publish = define_c_func(paho_c_dll, "+MQTTClient_publish", {C_H
 --MQTTClient_publishMessage
 --MQTTClient_receive
 atom xMQTTClient_setCallbacks = define_c_func(paho_c_dll, "+MQTTClient_setCallbacks", {C_HANDLE, C_POINTER, C_POINTER, C_POINTER, C_POINTER}, C_INT)
---MQTTClient_setDisconnected
---MQTTClient_setPublished
---MQTTClient_setTraceCallback
---MQTTClient_setTraceLevel
+atom xMQTTClient_setTraceCallback = define_c_proc(paho_c_dll, "+MQTTClient_setTraceCallback", {C_POINTER})
+atom xMQTTClient_setTraceLevel = define_c_proc(paho_c_dll, "+MQTTClient_setTraceLevel", {C_INT})
 atom xMQTTClient_strerror = define_c_func(paho_c_dll, "+MQTTClient_strerror", {C_INT}, C_POINTER)
 atom xMQTTClient_subscribe = define_c_func(paho_c_dll, "+MQTTClient_subscribe", {C_HANDLE, C_POINTER, C_INT}, C_INT)
 atom xMQTTClient_subscribeMany = define_c_func(paho_c_dll, "+MQTTClient_subscribeMany", {C_HANDLE, C_INT, C_POINTER, C_POINTER}, C_INT)
@@ -122,7 +130,7 @@ atom xMQTTClient_yield = define_c_proc(paho_c_dll, "+MQTTClient_yield", {})
 --MQTTClient_connect5
 --MQTTClient_disconnect5
 --MQTTClient_publish5
---MQTTClient_publishMessage
+--MQTTClient_publishMessage5
 --MQTTClient_subscribe5
 --MQTTClient_subscribeMany5
 --MQTTClient_unsubscribe5
@@ -140,11 +148,15 @@ atom xMQTTClient_yield = define_c_proc(paho_c_dll, "+MQTTClient_yield", {})
 --MQTTPropertyName
 --MQTTReasonCode_toString
 --MQTTResponse_free
+--MQTTClient_setDisconnected
+--MQTTClient_setPublished
 
 
 --Local Variables--------------------------------------------------------------
 --Holds all created clients and callback handles associated with it
 sequence sessions = {}
+
+atom current_rid_trace = 0
 
 --Local Functions--------------------------------------------------------------
 procedure add_session(atom hndl)
@@ -206,10 +218,10 @@ function deliveryComplete_dispacher(atom ptr_context, atom token)
 	return call_func(sessions[1][CS_DC_RID], {context, token})
 end function
 
---Helper Functions ------------------------------------------------------------
-
-
-
+function trace_dispacher(atom level, atom ptr_message)
+	call_proc(current_rid_trace, {level, peek_string(ptr_message)})
+	return 0
+end function
 
 --MQTT Functions---------------------------------------------------------------
 public function MQTTClient_create(sequence server_uri, sequence client_id, atom persistence_type = MQTTCLIENT_PERSISTENCE_NONE, atom persistence_context = NULL)
@@ -403,7 +415,16 @@ public function MQTTClient_unsubscribeMany(atom hndl, sequence topics)
 	
 	atom ret = c_func(xMQTTClient_unsubscribeMany, {hndl, length(topics), ptr_topics})
 
-	free(ptr_topics)
+	free_pointer_array(ptr_topics)
 
 	return ret
 end function
+
+public procedure MQTTClient_setTraceLevel(integer level)
+	c_proc(xMQTTClient_setTraceLevel, {level})
+end procedure
+
+public procedure MQTTClient_setTraceCallback(atom rid_trace)
+	current_rid_trace = rid_trace
+	c_proc(xMQTTClient_setTraceCallback, {call_back({'+', routine_id("trace_dispacher")})})
+end procedure
