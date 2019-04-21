@@ -14,11 +14,12 @@ ifdef BITS32 then
 	end ifdef
 elsedef
 	puts(1, "64 Bits not suppoted yet\n")
-	abort(0)
+	abort(1)
 end ifdef
 
 if paho_c_dll <= 0 then
-	abort(1)
+	puts(1, "Error loading .dll / .so\n")
+	abort(2)
 end if
 
 --Constants--------------------------------------------------------------------
@@ -83,6 +84,14 @@ public enum
 	MA_PROPERTY_LENGTH,
 	MA_PROPERTY_ARRAY
 
+--Receive fields
+public enum
+	RE_TOPICNAME,
+	RE_MESSAGE,
+	RE_QOS,
+	RE_RETAINED,
+	RE_DUP
+
 --Trace Levels
 public enum
 	MQTTCLIENT_TRACE_MAXIMUM,
@@ -108,13 +117,13 @@ atom xMQTTClient_destroy = define_c_proc(paho_c_dll, "+MQTTClient_destroy", {C_H
 atom xMQTTClient_disconnect = define_c_func(paho_c_dll, "+MQTTClient_disconnect", {C_HANDLE, C_INT}, C_INT)
 atom xMQTTClient_free = define_c_proc(paho_c_dll, "+MQTTClient_free", {C_POINTER})
 atom xMQTTClient_freeMessage = define_c_proc(paho_c_dll, "+MQTTClient_freeMessage", {C_POINTER})
---MQTTClient_getPendingDeliveryTokens
+atom xMQTTClient_getPendingDeliveryTokens = define_c_func(paho_c_dll, "+MQTTClient_getPendingDeliveryTokens", {C_HANDLE, C_POINTER}, C_INT)
 atom xMQTTClient_getVersionInfo = define_c_func(paho_c_dll, "+MQTTClient_getVersionInfo", {}, C_POINTER)
 atom xMQTTClient_global_init = define_c_proc(paho_c_dll, "+MQTTClient_global_init", {C_POINTER})
 atom xMQTTClient_isConnected = define_c_func(paho_c_dll, "+MQTTClient_isConnected", {C_HANDLE}, C_INT)
 atom xMQTTClient_publish = define_c_func(paho_c_dll, "+MQTTClient_publish", {C_HANDLE, C_POINTER, C_INT, C_POINTER, C_INT, C_INT, C_POINTER}, C_INT)
 --MQTTClient_publishMessage
---MQTTClient_receive
+atom xMQTTClient_receive = define_c_func(paho_c_dll, "+MQTTClient_receive", {C_HANDLE, C_POINTER, C_POINTER, C_POINTER, C_ULONG}, C_INT)
 atom xMQTTClient_setCallbacks = define_c_func(paho_c_dll, "+MQTTClient_setCallbacks", {C_HANDLE, C_POINTER, C_POINTER, C_POINTER, C_POINTER}, C_INT)
 atom xMQTTClient_setTraceCallback = define_c_proc(paho_c_dll, "+MQTTClient_setTraceCallback", {C_POINTER})
 atom xMQTTClient_setTraceLevel = define_c_proc(paho_c_dll, "+MQTTClient_setTraceLevel", {C_INT})
@@ -428,3 +437,63 @@ public procedure MQTTClient_setTraceCallback(atom rid_trace)
 	current_rid_trace = rid_trace
 	c_proc(xMQTTClient_setTraceCallback, {call_back({'+', routine_id("trace_dispacher")})})
 end procedure
+
+public function MQTTClient_getPendingDeliveryTokens(atom hndl)
+	sequence tokens = {}
+	atom ptr_tokens = allocate_data(4)
+
+	atom ret = c_func(xMQTTClient_getPendingDeliveryTokens, {hndl, ptr_tokens})
+
+	if ret = MQTTCLIENT_SUCCESS then
+		atom n = 0
+		while 1 do
+			atom token = peek4s(peek4u(ptr_tokens)+n)
+			if not equal(token, -1) then
+				tokens &= {token}
+				n += 4
+			else
+				exit
+			end if
+		end while
+
+		free(peek4u(ptr_tokens))
+	else
+		tokens = ret
+	end if
+
+	free(ptr_tokens)
+
+	return tokens
+end function
+
+public function MQTTClient_receive(atom hndl, atom timeout)
+	atom ptr_topicName = allocate_data(4)
+	atom ptr_topicLen = allocate_data(4)
+	atom ptr_clientMessage = allocate_data(4)
+
+	object ret = c_func(xMQTTClient_receive, {hndl, ptr_topicName, ptr_topicLen, ptr_clientMessage, timeout})
+	if ret = MQTTCLIENT_SUCCESS or ret = MQTTCLIENT_TOPICNAME_TRUNCATED then
+		--returns null fot timeout
+		if peek4u(ptr_clientMessage) = 0 then
+			ret = 1
+		else
+			sequence topicName = peek({peek4u(ptr_topicName),peek4u(ptr_topicLen)})
+			sequence message = peek({peek4u(peek4u(ptr_clientMessage)+12), peek4u(peek4u(ptr_clientMessage)+8)})
+			atom qos = peek4u(peek4u(ptr_clientMessage)+16)
+			atom retained = peek4u(peek4u(ptr_clientMessage)+20)
+			atom dup = peek4u(peek4u(ptr_clientMessage)+24)
+
+			ret = {topicName, message, qos, retained, dup}
+		end if
+	end if
+
+	if sequence(ret) then
+		MQTTClient_freeMessage(peek4u(ptr_clientMessage))
+	end if
+
+	free(ptr_topicName)
+	free(ptr_topicLen)
+	free(ptr_clientMessage)
+
+	return ret
+end function
