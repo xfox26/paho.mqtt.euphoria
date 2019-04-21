@@ -71,6 +71,13 @@ public enum
 	CO_MAXINFLIGHTMESSAGES,
 	CO_CLEANSTART
 
+--Will Options
+public enum
+	WL_TOPIC,
+	WL_MESSAGE,
+	WL_RETAINED,
+	WL_QOS
+
 --Message Arrived fields
 public enum
 	MA_PAYLOADLEN,
@@ -112,7 +119,6 @@ enum
 --C_Func-----------------------------------------------------------------------
 atom xMQTTClient_connect = define_c_func(paho_c_dll, "+MQTTClient_connect", {C_HANDLE, C_POINTER}, C_INT)
 atom xMQTTClient_create = define_c_func(paho_c_dll, "+MQTTClient_create", {C_HANDLE, C_POINTER ,C_POINTER, C_INT, C_INT}, C_INT)
---MQTTClient_createWithOptions
 atom xMQTTClient_destroy = define_c_proc(paho_c_dll, "+MQTTClient_destroy", {C_HANDLE})
 atom xMQTTClient_disconnect = define_c_func(paho_c_dll, "+MQTTClient_disconnect", {C_HANDLE, C_INT}, C_INT)
 atom xMQTTClient_free = define_c_proc(paho_c_dll, "+MQTTClient_free", {C_POINTER})
@@ -122,7 +128,6 @@ atom xMQTTClient_getVersionInfo = define_c_func(paho_c_dll, "+MQTTClient_getVers
 atom xMQTTClient_global_init = define_c_proc(paho_c_dll, "+MQTTClient_global_init", {C_POINTER})
 atom xMQTTClient_isConnected = define_c_func(paho_c_dll, "+MQTTClient_isConnected", {C_HANDLE}, C_INT)
 atom xMQTTClient_publish = define_c_func(paho_c_dll, "+MQTTClient_publish", {C_HANDLE, C_POINTER, C_INT, C_POINTER, C_INT, C_INT, C_POINTER}, C_INT)
---MQTTClient_publishMessage
 atom xMQTTClient_receive = define_c_func(paho_c_dll, "+MQTTClient_receive", {C_HANDLE, C_POINTER, C_POINTER, C_POINTER, C_ULONG}, C_INT)
 atom xMQTTClient_setCallbacks = define_c_func(paho_c_dll, "+MQTTClient_setCallbacks", {C_HANDLE, C_POINTER, C_POINTER, C_POINTER, C_POINTER}, C_INT)
 atom xMQTTClient_setTraceCallback = define_c_proc(paho_c_dll, "+MQTTClient_setTraceCallback", {C_POINTER})
@@ -135,6 +140,8 @@ atom xMQTTClient_unsubscribeMany = define_c_func(paho_c_dll, "+MQTTClient_unsubs
 atom xMQTTClient_waitForCompletion = define_c_func(paho_c_dll, "+MQTTClient_waitForCompletion", {C_HANDLE, C_INT, C_ULONG}, C_INT)
 atom xMQTTClient_yield = define_c_proc(paho_c_dll, "+MQTTClient_yield", {})
 
+--MQTTClient_createWithOptions --same functionality as xMQTTClient_create, will not wrap by now
+--MQTTClient_publishMessage --same functionality as MQTTClient_publish, will not wrap by now
 -------MQTT v5
 --MQTTClient_connect5
 --MQTTClient_disconnect5
@@ -251,6 +258,9 @@ end function
 
 public function MQTTClient_connect(atom hndl, sequence options=default_connectOptions)
 	atom userpass_allocated = 0
+	atom will_allocated = 0
+
+	atom MQTTClient_willOptions, ptr_will_topic, ptr_will_message
 
 	atom MQTTClient_connectOptions = allocate_data(4*21)
 
@@ -261,6 +271,30 @@ public function MQTTClient_connect(atom hndl, sequence options=default_connectOp
 		userpass_allocated = 1
 	end if
 
+	--check for WILL options
+	if not equal(options[CO_WILL], NULL) then
+		--allocate strings
+		ptr_will_topic = allocate_string(options[CO_WILL][WL_TOPIC])
+		ptr_will_message = allocate_string(options[CO_WILL][WL_MESSAGE])
+
+		--create will structure
+		MQTTClient_willOptions = allocate_data(4*8)
+
+		poke(MQTTClient_willOptions,"MQTW")
+		poke4(MQTTClient_willOptions+4, 0)
+		poke4(MQTTClient_willOptions+8, ptr_will_topic)
+		poke4(MQTTClient_willOptions+12, ptr_will_message)
+		poke4(MQTTClient_willOptions+16, options[CO_WILL][WL_RETAINED])
+		poke4(MQTTClient_willOptions+20, options[CO_WILL][WL_QOS])
+
+		poke4(MQTTClient_willOptions+24, NULL)
+		poke4(MQTTClient_willOptions+28, NULL)
+
+		options[CO_WILL] = MQTTClient_willOptions
+
+		will_allocated = 1
+	end if
+
 	poke(MQTTClient_connectOptions,"MQTC")--must be MQTC
 	poke4(MQTTClient_connectOptions+4, options)
 
@@ -269,6 +303,12 @@ public function MQTTClient_connect(atom hndl, sequence options=default_connectOp
 	if userpass_allocated then
 		free(options[CO_USERNAME])
 		free(options[CO_PASSWORD])
+	end if
+
+	if will_allocated then
+		free(ptr_will_topic)
+		free(ptr_will_message)
+		free(MQTTClient_willOptions)
 	end if
 
 	return ret
