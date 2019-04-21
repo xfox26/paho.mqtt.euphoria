@@ -1,12 +1,16 @@
 include paho-mqtt3c.e
 include std/os.e
 include std/text.e
+include std/io.e
 
 MQTTClient_setTraceLevel(MQTTCLIENT_TRACE_MAXIMUM)
 MQTTClient_setTraceCallback(routine_id("trace_callback"))
 
+atom trace_fn = open("trace.txt", "w")
+
 procedure trace_callback(atom level, sequence message)
-	puts(1, sprint(level) &": "& message &"\n")
+	puts(trace_fn, sprint(level) &": "& message &"\n")
+	flush(trace_fn)
 end procedure
 
 atom ret
@@ -71,3 +75,5 @@ end while
 MQTTClient_unsubscribe(client, "test")
 MQTTClient_disconnect(client, 10000)
 MQTTClient_destroy(client)
+
+close(trace_fn)
