@@ -384,7 +384,7 @@ public function MQTTClient_unsubscribe(atom hndl, sequence topic)
 end function
 
 public function MQTTClient_disconnect(atom hndl, atom timeout)
-	return c_func(xMQTTClient_disconnect, {hndl, timeout})
+	return c_func(xMQTTClient_disconnect, {hndl, timeout*1000})
 end function
 
 public procedure MQTTClient_destroy(atom hndl)
@@ -426,7 +426,7 @@ public function MQTTClient_publish(atom hndl, sequence topicName, sequence paylo
 end function
 
 public function MQTTClient_waitForCompletion(atom hndl, atom token, atom timeout)
-	return c_func(xMQTTClient_waitForCompletion, {hndl, token, timeout})
+	return c_func(xMQTTClient_waitForCompletion, {hndl, token, timeout*1000})
 end function
 
 public function MQTTClient_isConnected(atom hndl)
@@ -511,7 +511,7 @@ public function MQTTClient_receive(atom hndl, atom timeout)
 	atom ptr_topicLen = allocate_data(4)
 	atom ptr_clientMessage = allocate_data(4)
 
-	object ret = c_func(xMQTTClient_receive, {hndl, ptr_topicName, ptr_topicLen, ptr_clientMessage, timeout})
+	object ret = c_func(xMQTTClient_receive, {hndl, ptr_topicName, ptr_topicLen, ptr_clientMessage, timeout*1000})
 	if ret = MQTTCLIENT_SUCCESS or ret = MQTTCLIENT_TOPICNAME_TRUNCATED then
 		--returns null fot timeout
 		if peek4u(ptr_clientMessage) = 0 then

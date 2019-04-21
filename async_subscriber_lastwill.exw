@@ -62,5 +62,5 @@ while 1 do --wait for messages
 end while
 
 MQTTClient_unsubscribe(client, "test")
-MQTTClient_disconnect(client, 10000)
+MQTTClient_disconnect(client, 10)
 MQTTClient_destroy(client)

@@ -36,7 +36,7 @@ end if
 puts(1, "Listening for messages\n")
 while 1 do --wait for messages
 
-	object received = MQTTClient_receive(client, 10000)
+	object received = MQTTClient_receive(client, 10)
 	if not atom(received) then
 		puts(1, "Topic   : "& received[RE_TOPICNAME] &"\n")
 		puts(1, "Message : "& received[RE_MESSAGE] &"\n")
@@ -60,5 +60,5 @@ while 1 do --wait for messages
 end while
 
 MQTTClient_unsubscribe(client, "test")
-MQTTClient_disconnect(client, 10000)
+MQTTClient_disconnect(client, 10)
 MQTTClient_destroy(client)

@@ -30,11 +30,11 @@ if token <= 0 then
 	abort(1)
 else
 	--Wait
-	ret = MQTTClient_waitForCompletion(client, token, 10000)
+	ret = MQTTClient_waitForCompletion(client, token, 10)
 	if ret != MQTTCLIENT_SUCCESS then
 		puts(1, "Error waiting: "&MQTTClient_strerror(ret)&"\n")
 	end if
 end if
 
-MQTTClient_disconnect(client, 10000)
+MQTTClient_disconnect(client, 10)
 MQTTClient_destroy(client)
