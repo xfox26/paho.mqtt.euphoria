@@ -18,17 +18,19 @@ atom ret
 MQTTClient_global_init()
 
 --on message arrived
-function message_arrived(sequence topicName, sequence message, sequence context, sequence raw_message)
-	puts(1, "topic:   "& topicName &"\n")
-	puts(1, "message: "& message &"\n")
-	puts(1, "context: "& context &"\n")
+function message_arrived(sequence topicName, sequence message, sequence context)
+	puts(1, "topic:    "& topicName &"\n")
+	puts(1, "message:  "& message[MA_PAYLOAD] &"\n")
+	puts(1, "qos:      "& sprint(message[MA_QOS]) &"\n")
+	puts(1, "retained: "& sprint(message[MA_RETAINED]) &"\n")
+	puts(1, "context:  "& context &"\n")
 	puts(1, "\n")
 
 	return 1 --success
 end function
 
 --Create handler
-atom client = MQTTClient_create("tcp://192.168.0.2:1883", "sub12345", 1, 1)
+atom client = MQTTClient_create("tcp://127.0.0.1:1883", "sub12345", 1, 1)
 if client <= 0 then
 	puts(1, "Error creating handler: "&MQTTClient_strerror(client)&"\n")
 	abort(1)
@@ -65,7 +67,6 @@ while 1 do --wait for messages
 	atom k = get_key()
 	if k = 120 or k = 88 then  -- x or X
 		puts(1, "Exiting\n")
-		
 		exit
 	end if
 

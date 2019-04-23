@@ -16,7 +16,7 @@ function message_arrived(sequence topicName, sequence message, sequence context,
 end function
 
 --Create handler
-atom client = MQTTClient_create("tcp://192.168.0.2:1883", "sub12345", 1, 1)
+atom client = MQTTClient_create("tcp://127.0.0.1:1883", "subwill12345", 1, 1)
 if client <= 0 then
 	puts(1, "Error creating handler: "&MQTTClient_strerror(client)&"\n")
 	abort(1)
@@ -33,6 +33,12 @@ end if
 sequence options = default_connectOptions
 options[CO_USERNAME] = "my_user"
 options[CO_PASSWORD] = "my_pass"
+
+options[CO_WILL] = default_willOptions
+options[CO_WILL][WL_TOPIC] = "will_topic"
+options[CO_WILL][WL_MESSAGE] = "This is a last will message"
+options[CO_WILL][WL_RETAINED] = 0
+options[CO_WILL][WL_QOS] = 2
 
 --Connect
 ret = MQTTClient_connect(client, options)

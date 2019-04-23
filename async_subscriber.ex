@@ -6,11 +6,29 @@ atom ret
 
 MQTTClient_global_init()
 
---Create handler
-atom client = MQTTClient_create("tcp://192.168.0.2:1883", "sub12345", 1, 1)
+--on message arrived
+function message_arrived(sequence topicName, sequence message, sequence context)
+	puts(1, "topic:    "& topicName &"\n")
+	puts(1, "message:  "& message[MA_PAYLOAD] &"\n")
+	puts(1, "qos:      "& sprint(message[MA_QOS]) &"\n")
+	puts(1, "retained: "& sprint(message[MA_RETAINED]) &"\n")
+	puts(1, "context:  "& context &"\n")
+	puts(1, "\n")
 
+	return 1 --success
+end function
+
+--Create handler
+atom client = MQTTClient_create("tcp://127.0.0.1:1883", "sub12345", 1, 1)
 if client <= 0 then
 	puts(1, "Error creating handler: "&MQTTClient_strerror(client)&"\n")
+	abort(1)
+end if
+
+--Set Callbacks
+ret = MQTTClient_setCallbacks(client, routine_id("message_arrived"), 0, 0, "Some optional context")
+if ret != MQTTCLIENT_SUCCESS then
+	puts(1, "Error setting Callbacks: "&MQTTClient_strerror(ret)&"\n")
 	abort(1)
 end if
 
@@ -35,28 +53,14 @@ end if
 
 puts(1, "Listening for messages\n")
 while 1 do --wait for messages
-
-	object received = MQTTClient_receive(client, 10)
-	if not atom(received) then
-		puts(1, "Topic   : "& received[RE_TOPICNAME] &"\n")
-		puts(1, "Message : "& received[RE_MESSAGE] &"\n")
-		puts(1, "Qos     : "& sprint(received[RE_QOS]) &"\n")
-		puts(1, "Retained: "& sprint(received[RE_RETAINED]) &"\n")
-		puts(1, "Dup     : "& sprint(received[RE_DUP]) &"\n")
-	else
-		if received < 0 then
-			puts(1, "Error receiving: "&MQTTClient_strerror(received)&"\n")
-		elsif received = 1 then
-			puts(1, "Timeout waiting for message...\n")
-		end if
-	end if
-
 	atom k = get_key()
 	if k = 120 or k = 88 then  -- x or X
 		puts(1, "Exiting\n")
 		
 		exit
 	end if
+
+	sleep(1)
 end while
 
 MQTTClient_unsubscribe(client, "test")

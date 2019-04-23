@@ -1,22 +1,25 @@
 include paho-mqtt3c.e
 include std/os.e
+include std/text.e
 
 atom ret
 
 MQTTClient_global_init()
 
 --on message arrived
-function message_arrived(sequence topicName, sequence message, sequence context, sequence raw_message)
-	puts(1, "topic:   "& topicName &"\n")
-	puts(1, "message: "& message &"\n")
-	puts(1, "context: "& context &"\n")
+function message_arrived(sequence topicName, sequence message, sequence context)
+	puts(1, "topic:    "& topicName &"\n")
+	puts(1, "message:  "& message[MA_PAYLOAD] &"\n")
+	puts(1, "qos:      "& sprint(message[MA_QOS]) &"\n")
+	puts(1, "retained: "& sprint(message[MA_RETAINED]) &"\n")
+	puts(1, "context:  "& context &"\n")
 	puts(1, "\n")
 
 	return 1 --success
 end function
 
 --Create handler
-atom client = MQTTClient_create("tcp://192.168.0.2:1883", "subwill12345", 1, 1)
+atom client = MQTTClient_create("tcp://127.0.0.1:1883", "sub12345", 1, 1)
 if client <= 0 then
 	puts(1, "Error creating handler: "&MQTTClient_strerror(client)&"\n")
 	abort(1)
@@ -33,7 +36,6 @@ end if
 sequence options = default_connectOptions
 options[CO_USERNAME] = "my_user"
 options[CO_PASSWORD] = "my_pass"
-options[CO_WILL] = {"will_topic", "This is a last will message", 0, 2}
 
 --Connect
 ret = MQTTClient_connect(client, options)
@@ -43,7 +45,7 @@ if ret != MQTTCLIENT_SUCCESS then
 end if
 
 --Subscribe
-ret = MQTTClient_subscribe(client, "test", 2)
+ret = MQTTClient_subscribeMany(client, {{"test",2},{"test2",2},{"will_topic",2}})
 if ret != MQTTCLIENT_SUCCESS then
 	puts(1, "Error subscribing: "&MQTTClient_strerror(ret)&"\n")
 	abort(1)
@@ -61,6 +63,7 @@ while 1 do --wait for messages
 	sleep(1)
 end while
 
-MQTTClient_unsubscribe(client, "test")
+MQTTClient_unsubscribeMany(client, {"test","test2"})
 MQTTClient_disconnect(client, 10)
 MQTTClient_destroy(client)
+

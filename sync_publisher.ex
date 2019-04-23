@@ -5,7 +5,7 @@ atom ret
 MQTTClient_global_init()
 
 --Create handler
-atom client = MQTTClient_create("tcp://192.168.0.2:1883", "pub12345", 1, 1)
+atom client = MQTTClient_create("tcp://127.0.0.1:1883", "pub12345", 1, 1)
 if client <= 0 then
 	puts(1, "Error creating handler: "&MQTTClient_strerror(client)&"\n")
 	abort(1)
