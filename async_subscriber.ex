@@ -7,12 +7,11 @@ atom ret
 MQTTClient_global_init()
 
 --on message arrived
-function message_arrived(sequence topicName, sequence message, sequence context)
+function message_arrived(sequence topicName, sequence message)
 	puts(1, "topic:    "& topicName &"\n")
 	puts(1, "message:  "& message[MA_PAYLOAD] &"\n")
 	puts(1, "qos:      "& sprint(message[MA_QOS]) &"\n")
 	puts(1, "retained: "& sprint(message[MA_RETAINED]) &"\n")
-	puts(1, "context:  "& context &"\n")
 	puts(1, "\n")
 
 	return 1 --success
@@ -26,7 +25,7 @@ if client <= 0 then
 end if
 
 --Set Callbacks
-ret = MQTTClient_setCallbacks(client, routine_id("message_arrived"), 0, 0, "Some optional context")
+ret = MQTTClient_setCallbacks(client, routine_id("message_arrived"), 0, 0)
 if ret != MQTTCLIENT_SUCCESS then
 	puts(1, "Error setting Callbacks: "&MQTTClient_strerror(ret)&"\n")
 	abort(1)

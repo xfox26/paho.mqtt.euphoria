@@ -107,9 +107,10 @@ public enum
 
 --Callbacks
 enum
-	MA_RID,
-	CL_RID,
-	DC_RID
+	CS_HANDLE,
+	CS_MA_RID,
+	CS_CL_RID,
+	CS_DC_RID
 
 --C_Func-----------------------------------------------------------------------
 atom xMQTTClient_connect = define_c_func(paho_c_dll, "+MQTTClient_connect", {C_HANDLE, C_POINTER}, C_INT)
@@ -164,7 +165,8 @@ atom xMQTTClient_yield = define_c_proc(paho_c_dll, "+MQTTClient_yield", {})
 
 
 --Local Variables--------------------------------------------------------------
-sequence current_rids = {0,0,0}
+--sequence current_rids = {0,0,0}
+sequence sessions = {}
 atom current_rid_trace = 0
 
 --Local Functions--------------------------------------------------------------
@@ -184,6 +186,36 @@ procedure poke_address(object addr, object data)
 	end ifdef
 end procedure
 
+procedure add_session(atom hndl)
+	sessions &= {{hndl,0,0,0}}
+end procedure
+
+procedure set_session_rid(atom hndl, atom rid_type, atom rid)
+	for i=1 to length(sessions) do
+		if sessions[i][CS_HANDLE] = hndl then
+			sessions[i][rid_type] = rid
+			exit
+		end if
+	end for
+end procedure
+
+function get_session_rid(atom hndl, atom rid_type)
+	for i=1 to length(sessions) do
+		if sessions[i][CS_HANDLE] = hndl then
+			return sessions[i][rid_type]
+		end if
+	end for
+	return 0
+end function
+
+procedure remove_session(atom hndl)
+	for i=1 to length(sessions) do
+		if sessions[i][CS_HANDLE] = hndl then
+			sessions = remove(sessions, i)
+			exit
+		end if
+	end for
+end procedure
 --Dispachers-------------------------------------------------------------------
 function messageArrived_dispacher(atom ptr_context, atom ptr_topicName, atom topicLen, atom ptr_client_message)
 	sequence message = repeat({},10)
@@ -213,25 +245,25 @@ function messageArrived_dispacher(atom ptr_context, atom ptr_topicName, atom top
 	end ifdef
 
 	sequence topic = peek_string(ptr_topicName)
-	sequence context = peek_string(ptr_context)
+	atom context = peek_address(ptr_context)
 
 	MQTTClient_freeMessage(ptr_client_message)
 	MQTTClient_free(ptr_topicName)
 
-	return call_func(current_rids[MA_RID], {topic, message, context})
+	return call_func(get_session_rid(context, CS_MA_RID), {topic, message})
 end function
 
 function connectionLost_dispacher(atom ptr_context, atom ptr_cause)
-	sequence context = peek_string(ptr_context)
+	atom context = peek_address(ptr_context)
 	sequence cause = peek_string(cause)
 	
-	return call_func(current_rids[CL_RID], {context, cause})
+	return call_func(get_session_rid(context, CS_CL_RID), {cause})
 end function
 
 function deliveryComplete_dispacher(atom ptr_context, atom token)
-	sequence context = peek_string(ptr_context)
+	atom context = peek_address(ptr_context)
 	
-	return call_func(current_rids[DC_RID], {context, token})
+	return call_func(get_session_rid(context, CS_DC_RID), {token})
 end function
 
 function trace_dispacher(atom level, atom ptr_message)
@@ -342,6 +374,7 @@ public function MQTTClient_create(sequence server_uri, sequence client_id, atom 
 	atom ret = c_func(xMQTTClient_create, {hndl, ptr_server_uri, ptr_client_id, persistence_type, persistence_context}) 
 		if ret = MQTTCLIENT_SUCCESS then 
 			ret = peek_address(hndl)
+			add_session(ret)
 		end if 
 	free(ptr_server_uri) 
 	free(ptr_client_id) 
@@ -354,6 +387,7 @@ public procedure MQTTClient_destroy(atom hndl)
 	poke_address(ptr_hndl, hndl)
 	c_proc(xMQTTClient_destroy, {ptr_hndl})
 	free(ptr_hndl)
+	remove_session(hndl)
 end procedure
 
 public function MQTTClient_disconnect(atom hndl, atom timeout)
@@ -480,30 +514,28 @@ public function MQTTClient_receive(atom hndl, atom timeout)
 	return ret
 end function
 
-public function MQTTClient_setCallbacks(atom hndl, atom rid_messageArrived = 0,  atom rid_deliveryComplete = 0, atom rid_connectionLost = 0, sequence context = "")
+public function MQTTClient_setCallbacks(atom hndl, atom rid_messageArrived = 0,  atom rid_deliveryComplete = 0, atom rid_connectionLost = 0)
 	atom cl = NULL
 	atom ma = NULL
 	atom dc = NULL
-	atom ptr_context
 	
 	if rid_connectionLost != 0 then
-		current_rids[CL_RID] = rid_connectionLost
+		set_session_rid(hndl, CS_CL_RID, rid_connectionLost)
 		cl  = call_back({'+', routine_id("connectionLost_dispacher")})
 	end if
 
 	if rid_messageArrived != 0 then
-		current_rids[MA_RID] = rid_messageArrived
+		set_session_rid(hndl, CS_MA_RID, rid_messageArrived)
 		ma = call_back({'+', routine_id("messageArrived_dispacher")})
 	end if
 
 	if rid_deliveryComplete != 0 then
-		current_rids[DC_RID] = rid_deliveryComplete
+		set_session_rid(hndl, CS_DC_RID, rid_deliveryComplete)
 		dc = call_back({'+', routine_id("deliveryComplete_dispacher")})
 	end if
 
-	if not equal(context, "") then
-		ptr_context = allocate_string(context)
-	end if
+	atom ptr_context = allocate_data(ADDRESS_LENGTH)
+	poke_address(ptr_context, hndl)
 
 	return c_func(xMQTTClient_setCallbacks, {hndl, ptr_context, cl, ma, dc})
 end function
